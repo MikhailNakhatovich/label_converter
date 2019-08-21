@@ -4,6 +4,7 @@ import json
 import numpy as np
 import os
 from shapely.geometry import Polygon
+import tripy
 import xml.etree.ElementTree as ET
 
 
@@ -97,6 +98,35 @@ def get_image(data):
     return cv2.imdecode(np.fromstring(img_bytes, np.uint8), cv2.IMREAD_COLOR)
 
 
+def create_rect(bbox):
+    return [[bbox[0], bbox[1]], [bbox[2], bbox[1]], [bbox[2], bbox[3]], [bbox[0], bbox[3]]]
+
+
+def merge_walls(labels):
+    flag = True
+    coef = 0.5
+    while flag:
+        flag = False
+        for _ in labels:
+            for i, other in enumerate(labels):
+                if other is _:
+                    continue
+                intersection = _['poly'].intersection(other['poly'])
+                if intersection.is_empty:
+                    continue
+                if intersection.area / _['poly'].area >= coef or intersection.area / other['poly'].area >= coef:
+                    union = _['poly'].union(other['poly'])
+                    bbox = np.asarray(union.bounds, np.int32)
+                    _['bbox'] = bbox
+                    _['poly'] = Polygon(create_rect(bbox))
+                    del labels[i]
+                    flag = True
+                    break
+            if flag:
+                break
+    return labels
+
+
 def get_splitted_images(img, labels):
     image1 = np.full(img.shape, np.uint8(255))
     image2 = image1.copy()
@@ -110,7 +140,14 @@ def get_splitted_images(img, labels):
         if 'wall' in _['name']:
             cv2.fillPoly(image1, [poly], 0)
             image1 = cv2.add(image1, mask_out)
-            new_labels1.append(_)
+            triangles = tripy.earclip(poly)
+            wall_labels = []
+            for tr in triangles:
+                polygon = Polygon(tr)
+                bbox = np.asarray(polygon.bounds, np.int32)
+                label = {'name': _['name'], 'bbox': bbox, 'poly': Polygon(create_rect(bbox))}
+                wall_labels.append(label)
+            new_labels1.extend(merge_walls(wall_labels))
         else:
             cv2.fillPoly(image2, [poly], 0)
             image2 = cv2.add(image2, mask_out)
@@ -119,6 +156,7 @@ def get_splitted_images(img, labels):
 
 
 def convert(path_to_json, path_to_xml, easy_mode):
+    print("Filename `%s`" % path_to_json)
     layout = open_json(path_to_json)
     if layout is None:
         return
