@@ -34,7 +34,7 @@ if __name__ == '__main__':
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    if os.path.isfile(input_path):
+    if os.path.isfile(input_path) and input_path[-len(FILE_FILTER):].lower() == FILE_FILTER:
         convert(input_path, create_xml_path(input_path, output_path), easy_converter)
     elif not args.tree:
         files = os.listdir(input_path)
