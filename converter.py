@@ -97,6 +97,27 @@ def get_image(data):
     return cv2.imdecode(np.fromstring(img_bytes, np.uint8), cv2.IMREAD_COLOR)
 
 
+def get_splitted_images(img, labels):
+    image1 = np.full(img.shape, np.uint8(255))
+    image2 = image1.copy()
+    new_labels1, new_labels2 = [], []
+    for _ in labels:
+        tmp = np.zeros(img.shape, np.uint8)
+        poly = np.column_stack(_['poly'].exterior.coords.xy).astype(np.int32)[:-1]
+        cv2.fillPoly(tmp, [poly], (255, 255, 255))
+        mask_out = cv2.subtract(tmp, img)
+        mask_out = cv2.subtract(tmp, mask_out)
+        if 'wall' in _['name']:
+            cv2.fillPoly(image1, [poly], 0)
+            image1 = cv2.add(image1, mask_out)
+            new_labels1.append(_)
+        else:
+            cv2.fillPoly(image2, [poly], 0)
+            image2 = cv2.add(image2, mask_out)
+            new_labels2.append(_)
+    return [image1, image2], [new_labels1, new_labels2]
+
+
 def convert(path_to_json, path_to_xml, easy_mode):
     layout = open_json(path_to_json)
     if layout is None:
@@ -107,4 +128,9 @@ def convert(path_to_json, path_to_xml, easy_mode):
         create_xml(path_to_xml, layout, labels)
         cv2.imwrite(get_path_to_img(path_to_xml), img)
     else:
-        labels = []
+        labels = easy_convert(layout['shapes'])
+        images, labels = get_splitted_images(img, labels)
+        paths = [path_to_xml[:-len(XML_FILTER)] + "_" + str(i) + XML_FILTER for i in range(len(images))]
+        for i in range(len(images)):
+            create_xml(paths[i], layout, labels[i])
+            cv2.imwrite(get_path_to_img(paths[i]), images[i])
