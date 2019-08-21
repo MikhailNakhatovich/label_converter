@@ -92,19 +92,19 @@ def create_xml(path_to_xml, layout, labels):
     tree.write(path_to_xml)
 
 
-def create_image(path_to_img, data):
+def get_image(data):
     img_bytes = base64.b64decode(data)
-    img = cv2.imdecode(np.fromstring(img_bytes, np.uint8), cv2.IMREAD_COLOR)
-    cv2.imwrite(path_to_img, img)
+    return cv2.imdecode(np.fromstring(img_bytes, np.uint8), cv2.IMREAD_COLOR)
 
 
 def convert(path_to_json, path_to_xml, easy_mode):
     layout = open_json(path_to_json)
     if layout is None:
         return
+    img = get_image(layout['imageData'])
     if easy_mode:
         labels = easy_convert(layout['shapes'])
         create_xml(path_to_xml, layout, labels)
-        create_image(get_path_to_img(path_to_xml), layout['imageData'])
+        cv2.imwrite(get_path_to_img(path_to_xml), img)
     else:
         labels = []
