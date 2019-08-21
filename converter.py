@@ -75,14 +75,7 @@ def easy_convert(layout):
     return labels
 
 
-def convert(path_to_json, path_to_xml, easy_mode):
-    with open(path_to_json, 'r') as f:
-        layout = json.load(f)
-    if easy_mode:
-        labels = easy_convert(layout['shapes'])
-    else:
-        labels = []
-
+def create_xml(path_to_xml, layout, labels):
     tree = ET.ElementTree(element=ET.Element('annotation'))
     root = tree.getroot()
     add_base_information(root, path_to_xml, layout)
@@ -90,6 +83,19 @@ def convert(path_to_json, path_to_xml, easy_mode):
         add_object(root, _['name'], _['bbox'])
     tree.write(path_to_xml)
 
-    img_bytes = base64.b64decode(layout['imageData'])
+
+def create_image(path_to_img, data):
+    img_bytes = base64.b64decode(data)
     img = cv2.imdecode(np.fromstring(img_bytes, np.uint8), cv2.IMREAD_COLOR)
-    cv2.imwrite(get_path_to_img(path_to_xml), img)
+    cv2.imwrite(path_to_img, img)
+
+
+def convert(path_to_json, path_to_xml, easy_mode):
+    with open(path_to_json, 'r') as f:
+        layout = json.load(f)
+    if easy_mode:
+        labels = easy_convert(layout['shapes'])
+        create_xml(path_to_xml, layout, labels)
+        create_image(get_path_to_img(path_to_xml), layout['imageData'])
+    else:
+        labels = []
