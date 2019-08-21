@@ -11,6 +11,14 @@ XML_FILTER = ".xml"
 PNG_FILTER = ".png"
 
 
+def open_json(path_to_json):
+    if not os.path.exists(path_to_json):
+        return None
+    with open(path_to_json, 'r') as f:
+        layout = json.load(f)
+    return layout
+
+
 def get_path_to_img(path_to_xml):
     return os.path.abspath(path_to_xml)[:-len(XML_FILTER)] + PNG_FILTER
 
@@ -91,8 +99,9 @@ def create_image(path_to_img, data):
 
 
 def convert(path_to_json, path_to_xml, easy_mode):
-    with open(path_to_json, 'r') as f:
-        layout = json.load(f)
+    layout = open_json(path_to_json)
+    if layout is None:
+        return
     if easy_mode:
         labels = easy_convert(layout['shapes'])
         create_xml(path_to_xml, layout, labels)
