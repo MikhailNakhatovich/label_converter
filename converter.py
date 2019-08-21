@@ -1,9 +1,9 @@
 import base64
 import cv2
 import json
-import matplotlib.path
 import numpy as np
 import os
+from shapely.geometry import Polygon
 import xml.etree.ElementTree as ET
 
 
@@ -52,13 +52,26 @@ def add_object(root, name, bbox):
     root.append(object_element)
 
 
+def get_polygon_from_polygon(points):
+    return Polygon(points)
+
+
+def get_polygon_from_rectangle(points):
+    return Polygon([points[0], [points[0][0], points[1][0]], points[1], [points[1][1], points[0][1]]])
+
+
 def easy_convert(layout):
+    shape_map = {
+        'polygon': get_polygon_from_polygon,
+        'rectangle': get_polygon_from_rectangle
+    }
     labels = []
     for _ in layout:
         points = np.round(_['points'])
-        path = matplotlib.path.Path(points)
-        bbox = path.get_extents()
-        labels.append({'name': _['label'], 'bbox': np.asarray([bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax], int)})
+        poly = shape_map[_['shape_type']](points)
+        bbox = poly.bounds
+        label = {'name': _['label'], 'bbox': np.asarray(bbox, int), 'poly': poly}
+        labels.append(label)
     return labels
 
 
