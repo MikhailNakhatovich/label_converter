@@ -57,7 +57,7 @@ def get_polygon_from_polygon(points):
 
 
 def get_polygon_from_rectangle(points):
-    return Polygon([points[0], [points[0][0], points[1][0]], points[1], [points[1][1], points[0][1]]])
+    return Polygon([points[0], [points[0][0], points[1][1]], points[1], [points[1][0], points[0][1]]])
 
 
 def easy_convert(layout):
