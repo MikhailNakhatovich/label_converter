@@ -4,6 +4,7 @@ import json
 import numpy as np
 import os
 from shapely.geometry import Polygon
+import traceback
 import tripy
 import xml.etree.ElementTree as ET
 
@@ -144,6 +145,8 @@ def get_splitted_images(img, labels):
             wall_labels = []
             for tr in triangles:
                 polygon = Polygon(tr)
+                if not polygon.is_valid:
+                    continue
                 bbox = np.asarray(polygon.bounds, np.int32)
                 label = {'name': _['name'], 'bbox': bbox, 'poly': Polygon(create_rect(bbox))}
                 wall_labels.append(label)
@@ -183,13 +186,18 @@ def convert(path_to_json, path_to_xml, easy_mode=True, rect=None):
     img = get_image(layout['imageData'])
     if rect is not None:
         img = change_size_image(img, layout, rect)
-    labels = easy_convert(layout['shapes'])
-    if easy_mode:
-        create_xml(path_to_xml, layout, labels)
-        cv2.imwrite(get_path_to_img(path_to_xml), img)
-    else:
-        images, labels = get_splitted_images(img, labels)
-        paths = [path_to_xml[:-len(XML_FILTER)] + "_" + str(i) + XML_FILTER for i in range(len(images))]
-        for i in range(len(images)):
-            create_xml(paths[i], layout, labels[i])
-            cv2.imwrite(get_path_to_img(paths[i]), images[i])
+    try:
+        labels = easy_convert(layout['shapes'])
+        if easy_mode:
+            create_xml(path_to_xml, layout, labels)
+            cv2.imwrite(get_path_to_img(path_to_xml), img)
+        else:
+            images, labels = get_splitted_images(img, labels)
+            paths = [path_to_xml[:-len(XML_FILTER)] + "_" + str(i) + XML_FILTER for i in range(len(images))]
+            for i in range(len(images)):
+                create_xml(paths[i], layout, labels[i])
+                cv2.imwrite(get_path_to_img(paths[i]), images[i])
+        print("OK")
+    except:
+        print("FAILURE")
+        traceback.print_exc()
