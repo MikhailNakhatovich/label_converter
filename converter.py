@@ -69,15 +69,33 @@ def get_polygon_from_rectangle(points):
     return Polygon([points[0], [points[0][0], points[1][1]], points[1], [points[1][0], points[0][1]]])
 
 
+def check_count_points_polygon(points):
+    if len(points) > 3:
+        return True
+    return False
+
+
+def check_count_points_rectangle(points):
+    if len(points) == 2:
+        return True
+    return False
+
+
 def easy_convert(layout):
-    shape_map = {
+    polygon_map = {
         'polygon': get_polygon_from_polygon,
         'rectangle': get_polygon_from_rectangle
+    }
+    check_map = {
+        'polygon': check_count_points_polygon,
+        'rectangle': check_count_points_rectangle
     }
     labels = []
     for _ in layout:
         points = np.round(_['points'])
-        poly = shape_map[_['shape_type']](points)
+        if not check_map[_['shape_type']](points):
+            continue
+        poly = polygon_map[_['shape_type']](points)
         bbox = poly.bounds
         label = {'name': _['label'], 'bbox': np.asarray(bbox, int), 'poly': poly}
         labels.append(label)
