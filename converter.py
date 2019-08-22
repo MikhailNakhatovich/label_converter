@@ -155,18 +155,39 @@ def get_splitted_images(img, labels):
     return [image1, image2], [new_labels1, new_labels2]
 
 
-def convert(path_to_json, path_to_xml, easy_mode):
+def change_size_image(img, layout, rect):
+    height, width, channels = img.shape
+    h = rect[1]
+    w = int(h * width / height)
+    if w > rect[0]:
+        w = rect[0]
+        h = int(height / width * w)
+    new_img = cv2.resize(img, (w, h), interpolation=cv2.INTER_AREA)
+    s = np.full((rect[1], rect[0], 3), np.uint8(255))
+    sy = int((rect[1] - h) / 2)
+    sx = int((rect[0] - w) / 2)
+    s[sy:sy + h, sx:sx + w] = new_img
+
+    for shape in layout['shapes']:
+        points = shape['points']
+        for i, _ in enumerate(points):
+            points[i] = (int(sx + _[0] * w / width), int(sy + _[1] * h / height))
+    return s
+
+
+def convert(path_to_json, path_to_xml, easy_mode=True, rect=None):
     print("Filename `%s`" % path_to_json)
     layout = open_json(path_to_json)
     if layout is None:
         return
     img = get_image(layout['imageData'])
+    if rect is not None:
+        img = change_size_image(img, layout, rect)
+    labels = easy_convert(layout['shapes'])
     if easy_mode:
-        labels = easy_convert(layout['shapes'])
         create_xml(path_to_xml, layout, labels)
         cv2.imwrite(get_path_to_img(path_to_xml), img)
     else:
-        labels = easy_convert(layout['shapes'])
         images, labels = get_splitted_images(img, labels)
         paths = [path_to_xml[:-len(XML_FILTER)] + "_" + str(i) + XML_FILTER for i in range(len(images))]
         for i in range(len(images)):
